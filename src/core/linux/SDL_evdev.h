@@ -29,11 +29,30 @@
 #include "SDL_events.h"
 #include <sys/stat.h>
 
+typedef struct SDL_evtouch_state {
+	int tracking_id;
+	int pressed;
+	int released;
+	int is_down;
+	float x;
+	float y;
+} SDL_evtouch_state;
+
+typedef struct SDL_evtouch_info
+{
+	int current_slot;
+	int touchid;
+	int min_x, max_x;
+	int min_y, max_y;
+	SDL_evtouch_state touches[20];
+} SDL_evtouch_info;
+
 typedef struct SDL_evdevlist_item
 {
     char *path;
     int fd;
     struct SDL_evdevlist_item *next;
+	SDL_evtouch_info touchinfo;
 } SDL_evdevlist_item;
 
 typedef struct SDL_EVDEV_PrivateData

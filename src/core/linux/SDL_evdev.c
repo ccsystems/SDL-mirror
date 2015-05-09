@@ -547,7 +547,7 @@ void SDL_EVDEV_udev_callback(SDL_UDEV_deviceevent udev_type, int udev_class, con
         return;
     }
     
-    if (!(udev_class & (SDL_UDEV_DEVICE_MOUSE|SDL_UDEV_DEVICE_KEYBOARD))) {
+    if (!(udev_class & (SDL_UDEV_DEVICE_MOUSE|SDL_UDEV_DEVICE_KEYBOARD|SDL_UDEV_DEVICE_TOUCH))) {
         return;
     }
 
@@ -566,6 +566,8 @@ void SDL_EVDEV_udev_callback(SDL_UDEV_deviceevent udev_type, int udev_class, con
 }
 
 #endif /* SDL_USE_LIBUDEV */
+
+#define MTDEV_CODE_BTN_TOUCH 0x14a
 
 void 
 SDL_EVDEV_Poll(void)
@@ -598,8 +600,14 @@ SDL_EVDEV_Poll(void)
         while ((len = read(item->fd, events, (sizeof events))) > 0) {
             len /= sizeof(events[0]);
             for (i = 0; i < len; ++i) {
+                SDL_evtouch_state *touch_state = &item->touchinfo.touches[item->touchinfo.current_slot];
+
                 switch (events[i].type) {
                 case EV_KEY:
+                    if (events[i].code == MTDEV_CODE_BTN_TOUCH) {
+                        break;
+                    }
+
                     if (events[i].code >= BTN_MOUSE && events[i].code < BTN_MOUSE + SDL_arraysize(EVDEV_MouseButtons)) {
                         mouse_button = events[i].code - BTN_MOUSE;
                         if (events[i].value == 0) {
@@ -662,6 +670,26 @@ SDL_EVDEV_Poll(void)
                     break;
                 case EV_ABS:
                     switch(events[i].code) {
+                    case ABS_MT_SLOT:
+                        item->touchinfo.current_slot = events[i].value;
+                        break;
+                    case ABS_MT_TRACKING_ID:
+                        if(events[i].value == -1)
+                        {
+                            touch_state->released = 1;
+                        }
+                        else
+                        {
+                            touch_state->tracking_id = events[i].value;
+                            touch_state->pressed = 1;
+                        }
+                        break;
+                    case ABS_MT_POSITION_X:
+                        touch_state->x = (float)(events[i].value - item->touchinfo.min_x) / (float)item->touchinfo.max_x;
+                        break;
+                    case ABS_MT_POSITION_Y:
+                        touch_state->y = (float)(events[i].value - item->touchinfo.min_y) / (float)item->touchinfo.max_y;
+                        break;
                     case ABS_X:
                         SDL_SendMouseMotion(mouse->focus, mouse->mouseID, SDL_FALSE, events[i].value, mouse->y);
                         break;
@@ -695,6 +723,24 @@ SDL_EVDEV_Poll(void)
                     case SYN_DROPPED:
                         SDL_EVDEV_sync_device(item);
                         break;
+                    case SYN_REPORT:
+                        if(touch_state->pressed)
+                        {
+                            SDL_SendTouch(item->touchinfo.touchid, touch_state->tracking_id, 1, touch_state->x, touch_state->y, 1.0f);
+                            touch_state->is_down = 1;
+                            touch_state->pressed = 0;
+                        }
+                        else if(touch_state->released)
+                        {
+                            SDL_SendTouch(item->touchinfo.touchid, touch_state->tracking_id, 0, touch_state->x, touch_state->y, 1.0f);
+                            touch_state->is_down = 0;
+                            touch_state->released = 0;
+                        }
+                        else if(touch_state->is_down)
+                        {
+                            SDL_SendTouchMotion(item->touchinfo.touchid, touch_state->tracking_id, touch_state->x, touch_state->y, 1.0f);
+                        }
+                        break;
                     default:
                         break;
                     }
@@ -719,10 +765,60 @@ SDL_EVDEV_translate_keycode(int keycode)
     return scancode;
 }
 
+#define BITS_PER_LONG (sizeof(long) * 8)
+#define NBITS(x) ((((x)-1)/BITS_PER_LONG)+1)
+#define OFF(x)  ((x)%BITS_PER_LONG)
+#define BIT(x)  (1UL<<OFF(x))
+#define LONG(x) ((x)/BITS_PER_LONG)
+#define test_bit(bit, array)   ((array[LONG(bit)] >> OFF(bit)) & 1)
+
 static void
 SDL_EVDEV_sync_device(SDL_evdevlist_item *item) 
 {
-    /* TODO: get full state of device and report whatever is required */
+        static int touch_id = 1;
+        unsigned long bit[EV_MAX][NBITS(KEY_MAX)];
+        int abs[5], i;
+        int this_touch_id = 0;
+
+        memset(&item->touchinfo, 0, sizeof(item->touchinfo));
+
+        memset(bit, 0, sizeof(bit));
+        ioctl(item->fd, EVIOCGBIT(0, EV_MAX), bit[0]);
+
+        //if we have abs
+        if(test_bit(EV_ABS, bit[0]))
+        {
+            ioctl(item->fd, EVIOCGBIT(EV_ABS, KEY_MAX), bit[EV_ABS]);
+
+            //and we have touch slots
+            if(test_bit(ABS_MT_SLOT, bit[EV_ABS]))
+            {
+                this_touch_id = touch_id++;
+
+                //get the min/max of mt slot
+                ioctl(item->fd, EVIOCGABS(ABS_MT_SLOT), abs);
+
+                for(i = abs[1]; i <= abs[2]; i++)
+                    SDL_AddTouch(this_touch_id, "");
+
+                item->touchinfo.touchid = this_touch_id;
+                item->touchinfo.current_slot = 0;
+            }
+
+            if(test_bit(ABS_MT_POSITION_X, bit[EV_ABS]))
+            {
+                ioctl(item->fd, EVIOCGABS(ABS_MT_POSITION_X), abs);
+                item->touchinfo.min_x = abs[1];
+                item->touchinfo.max_x = abs[2];
+            }
+
+            if(test_bit(ABS_MT_POSITION_Y, bit[EV_ABS]))
+            {
+                ioctl(item->fd, EVIOCGABS(ABS_MT_POSITION_Y), abs);
+                item->touchinfo.min_y = abs[1];
+                item->touchinfo.max_y = abs[2];
+            }
+        }
 }
 
 #if SDL_USE_LIBUDEV

@@ -52,7 +52,8 @@ typedef enum
     SDL_UDEV_DEVICE_MOUSE       = 0x0001,
     SDL_UDEV_DEVICE_KEYBOARD    = 0x0002,
     SDL_UDEV_DEVICE_JOYSTICK    = 0x0004,
-    SDL_UDEV_DEVICE_SOUND       = 0x0008
+    SDL_UDEV_DEVICE_SOUND       = 0x0008,
+    SDL_UDEV_DEVICE_TOUCH       = 0x0010
 } SDL_UDEV_deviceclass;
 
 typedef void (*SDL_UDEV_Callback)(SDL_UDEV_deviceevent udev_type, int udev_class, const char *devpath);
