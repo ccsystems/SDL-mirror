@@ -113,7 +113,7 @@ X11_InitXinput2(_THIS)
 #endif
 
     /* Enable  Raw motion events for this display */
-    eventmask.deviceid = XIAllMasterDevices;
+    eventmask.deviceid = XIAllDevices;
     eventmask.mask_len = sizeof(mask);
     eventmask.mask = mask;
 
@@ -183,7 +183,7 @@ X11_InitXinput2Multitouch(_THIS)
     SDL_VideoData *data = (SDL_VideoData *) _this->driverdata;
     XIDeviceInfo *info;
     int ndevices,i,j;
-    info = X11_XIQueryDevice(data->display, XIAllMasterDevices, &ndevices);
+    info = X11_XIQueryDevice(data->display, XIAllDevices, &ndevices);
 
     for (i = 0; i < ndevices; i++) {
         XIDeviceInfo *dev = &info[i];
@@ -222,7 +222,7 @@ X11_Xinput2SelectTouch(_THIS, SDL_Window *window)
     data = (SDL_VideoData *) _this->driverdata;
     window_data = (SDL_WindowData*)window->driverdata;
 
-    eventmask.deviceid = XIAllMasterDevices;
+    eventmask.deviceid = XIAllDevices;
     eventmask.mask_len = sizeof(mask);
     eventmask.mask = mask;
 
