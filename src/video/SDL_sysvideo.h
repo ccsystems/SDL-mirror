@@ -396,6 +396,9 @@ extern VideoBootStrap Wayland_bootstrap;
 #if SDL_VIDEO_DRIVER_NACL
 extern VideoBootStrap NACL_bootstrap;
 #endif
+#if SDL_VIDEO_DRIVER_MALI
+extern VideoBootStrap MALI_bootstrap;
+#endif
 #if SDL_VIDEO_DRIVER_VIVANTE
 extern VideoBootStrap VIVANTE_bootstrap;
 #endif
