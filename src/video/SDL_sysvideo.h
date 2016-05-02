@@ -384,6 +384,9 @@ extern VideoBootStrap PSP_bootstrap;
 #if SDL_VIDEO_DRIVER_RPI
 extern VideoBootStrap RPI_bootstrap;
 #endif
+#if SDL_VIDEO_DRIVER_GBM
+extern VideoBootStrap GBM_bootstrap;
+#endif
 #if SDL_VIDEO_DRIVER_DUMMY
 extern VideoBootStrap DUMMY_bootstrap;
 #endif

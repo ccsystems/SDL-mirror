@@ -1960,6 +1960,26 @@ AC_HELP_STRING([--enable-video-dummy], [use dummy video driver [[default=yes]]])
     fi
 }
 
+AC_ARG_ENABLE(video-gbm,
+AC_HELP_STRING([--enable-video-gbm], [Enable the video driver GBM [[default=no]]]),
+              , enable_video_gbm=no)
+
+CheckGdbVideo()
+{
+    if test x$enable_video_gbm = xyes; then
+        AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
+        GBM_CFLAGS=`$PKG_CONFIG --cflags libdrm gbm`
+        GBM_LIBS=`$PKG_CONFIG --libs libdrm gbm`
+
+        EXTRA_CFLAGS="$EXTRA_CFLAGS $GBM_CFLAGS"
+        EXTRA_LDFLAGS="$EXTRA_LDFLAGS $GBM_LIBS"
+
+        AC_DEFINE(SDL_VIDEO_DRIVER_GBM, 1, [ ])
+        SOURCES="$SOURCES $srcdir/src/video/gbm/*.c"
+        SUMMARY_video="${SUMMARY_video} gbm"
+    fi
+}
+
 dnl Check to see if OpenGL support is desired
 AC_ARG_ENABLE(video-opengl,
 AC_HELP_STRING([--enable-video-opengl], [include OpenGL support [[default=yes]]]),
@@ -2888,6 +2908,7 @@ case "$host" in
         CheckNAS
         CheckSNDIO
         CheckX11
+        CheckGdbVideo
         CheckDirectFB
         CheckFusionSound
         CheckOpenGLX11
@@ -3020,6 +3041,7 @@ case "$host" in
             fi
         fi
         CheckDummyVideo
+        CheckGdbVideo
         CheckDiskAudio
         CheckDummyAudio
         CheckWINDOWS
@@ -3150,6 +3172,7 @@ AC_HELP_STRING([--enable-render-d3d], [enable the Direct3D render driver [[defau
         ARCH=haiku
         ac_default_prefix=/boot/system
         CheckDummyVideo
+        CheckGdbVideo
         CheckDiskAudio
         CheckDummyAudio
         CheckHaikuVideo
@@ -3203,6 +3226,7 @@ AC_HELP_STRING([--enable-render-d3d], [enable the Direct3D render driver [[defau
 
         CheckVisibilityHidden
         CheckDummyVideo
+        CheckGdbVideo
         CheckDiskAudio
         CheckDummyAudio
         CheckDLOPEN
@@ -3271,6 +3295,7 @@ AC_HELP_STRING([--enable-render-d3d], [enable the Direct3D render driver [[defau
 
         CheckVisibilityHidden
         CheckDummyVideo
+        CheckGdbVideo
         CheckDiskAudio
         CheckDummyAudio
         CheckDLOPEN
@@ -3339,6 +3364,7 @@ AC_HELP_STRING([--enable-render-d3d], [enable the Direct3D render driver [[defau
         CheckNativeClient
         CheckDummyAudio
         CheckDummyVideo
+        CheckGdbVideo
         CheckInputEvents
         CheckPTHREAD
         
@@ -3372,6 +3398,7 @@ AC_HELP_STRING([--enable-render-d3d], [enable the Direct3D render driver [[defau
 
         CheckVisibilityHidden
         CheckDummyVideo
+        CheckGdbVideo
         CheckDiskAudio
         CheckDummyAudio
         CheckDLOPEN
